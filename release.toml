@@ -1,0 +1,6 @@
+pre-release-hook = ["./hook.sh"]
+pre-release-replacements = [
+  {file="README.md", search="Current release: [a-z0-9\\.-]+", replace="Current release: {{version}}"} ,
+  {file="CHANGELOG.md", search="Unreleased", replace="{{version}}"},
+  {file="CHANGELOG.md", search="ReleaseDate", replace="{{date}}"}
+]

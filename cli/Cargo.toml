@@ -1,0 +1,18 @@
+[package]
+name = "sourcegen-cli"
+version = "0.1.0"
+authors = ["Ivan Dubrov <ivan@commure.com>"]
+edition = "2018"
+repository = "https://github.com/commure/sourcegen"
+license = "MIT/Apache-2.0"
+readme = "../README.md"
+description = """
+In-place Rust source generator CLI utility.
+"""
+
+[dependencies]
+syn = { version = "0.15.42", features = ["full"] }
+proc-macro2 = { version = "0.4.30", features = ["span-locations"] }
+cargo_metadata = "0.8.1"
+failure = "0.1.5"
+tempfile = "3.0.8"

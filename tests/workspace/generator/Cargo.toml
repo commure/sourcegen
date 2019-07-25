@@ -1,0 +1,13 @@
+[package]
+name = "generator"
+version = "0.1.0"
+authors = ["Ivan Dubrov <ivan@commure.com>"]
+edition = "2018"
+
+[dependencies]
+failure = "0.1.5"
+syn = "0.15.42"
+quote = "0.6.13"
+proc-macro2 = "0.4.30"
+
+sourcegen-cli = { path = "../../../cli" }

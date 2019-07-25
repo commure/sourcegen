@@ -1,0 +1,8 @@
+[package]
+name = "sample"
+version = "0.1.0"
+authors = ["Ivan Dubrov <ivan@commure.com>"]
+edition = "2018"
+
+[dependencies]
+sourcegen = { path = "../../../derive" }

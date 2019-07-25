@@ -1,0 +1,13 @@
+[package]
+name = "sourcegen"
+version = "0.1.0"
+authors = ["Ivan Dubrov <ivan@commure.com>"]
+edition = "2018"
+repository = "https://github.com/commure/sourcegen"
+license = "MIT/Apache-2.0"
+description = """
+This procedural macro does not do anything; it's only needed to "process" `#[sourcegen::sourcegen(..)]` attributes (by doing nothing)
+"""
+
+[lib]
+proc-macro = true
