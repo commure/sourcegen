@@ -17,7 +17,7 @@ mod rustfmt;
 
 /// Trait to be implemented by source generators.
 pub trait SourceGenerator {
-    /// Expand struct definition. Return `None` if no changes are necessary.
+    /// Generate struct definition. Return `None` if no changes are necessary.
     fn generate_struct(
         &self,
         _args: syn::AttributeArgs,
@@ -26,11 +26,20 @@ pub trait SourceGenerator {
         Ok(None)
     }
 
-    /// Expand enum definition. Return `None` if no changes are necessary.
+    /// Generate enum definition. Return `None` if no changes are necessary.
     fn generate_enum(
         &self,
         _args: syn::AttributeArgs,
         _item: &syn::ItemEnum,
+    ) -> Result<Option<TokenStream>, Error> {
+        Ok(None)
+    }
+
+    /// Generate module. Return `None` if no changes are necessary.
+    fn generate_mod(
+        &self,
+        _args: syn::AttributeArgs,
+        _item: &syn::ItemMod,
     ) -> Result<Option<TokenStream>, Error> {
         Ok(None)
     }

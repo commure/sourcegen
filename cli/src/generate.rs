@@ -7,7 +7,7 @@ use std::path::Path;
 use syn::export::ToTokens;
 use syn::spanned::Spanned;
 use syn::{
-    Attribute, AttributeArgs, Ident, Item, ItemEnum, ItemStruct, LitStr, Meta, NestedMeta,
+    Attribute, AttributeArgs, Ident, Item, ItemEnum, ItemStruct, ItemMod, LitStr, Meta, NestedMeta,
     Visibility,
 };
 
@@ -117,13 +117,25 @@ fn handle_content(
                 }
             }
 
-            Item::Mod(item) if item.content.is_some() => {
-                let items = &item.content.as_ref().unwrap().1;
-                handle_content(path, source, items, generators, false, replacements)?;
-            }
             Item::Mod(item) => {
-                let mod_file = crate::mods::resolve_module(path, &item, is_root)?;
-                process_source_file(&mod_file, generators, false)?;
+
+                if let Some(invoke) = detect_invocation(path, &item.attrs, generators)? {
+                    let context_location = invoke.context_location;
+                    if let Some(expansion) = invoke
+                        .generator
+                        .generate_mod(invoke.args, item)
+                        .with_context(|_| SourcegenErrorKind::GeneratorError(context_location))?
+                    {
+                        let region = mod_region(source, item, invoke.expand_attr_pos)?;
+                        replacements.insert(region, expansion);
+                    }
+                } else if item.content.is_some() {
+                    let items = &item.content.as_ref().unwrap().1;
+                    handle_content(path, source, items, generators, false, replacements)?;
+                } else {
+                    let mod_file = crate::mods::resolve_module(path, &item, is_root)?;
+                    process_source_file(&mod_file, generators, false)?;
+                }
             }
             _ => {
                 // What else do we want to support?
@@ -136,10 +148,13 @@ fn handle_content(
 /// Detect the working region for the enums. The area starts after the `#[sourcegen]` attribute.
 fn enum_region(source: &str, item: &ItemEnum, attr_pos: usize) -> Result<Region, SourcegenError> {
     let from_span = if attr_pos + 1 < item.attrs.len() {
+        // We have more attributes -- take the next
         item.attrs[attr_pos + 1].span()
     } else if item.vis != Visibility::Inherited {
+        // Otherwise, take visibility modifier
         item.vis.span()
     } else {
+        // Lastly, take the `enum` token
         item.enum_token.span()
     };
     let to_span = item.brace_token.span;
@@ -160,16 +175,52 @@ fn struct_region(
     attr_pos: usize,
 ) -> Result<Region, SourcegenError> {
     let from_span = if attr_pos + 1 < item.attrs.len() {
+        // We have more attributes -- take the next
         item.attrs[attr_pos + 1].span()
     } else if item.vis != Visibility::Inherited {
+        // Otherwise, take visibility modifier
         item.vis.span()
     } else {
+        // Lastly, take the `struct` token
         item.struct_token.span()
     };
     let to_span = if let Some(semi) = item.semi_token {
         semi.span()
     } else {
         item.fields.span()
+    };
+
+    let from = line_column_to_offset(source, from_span.start())?;
+    let to = line_column_to_offset(source, to_span.end())?;
+    Ok(Region {
+        from,
+        to,
+        indent: from_span.start().column,
+    })
+}
+
+/// Detect the working region for the mod. The area starts after the `#[sourcegen]` attribute.
+fn mod_region(
+    source: &str,
+    item: &ItemMod,
+    attr_pos: usize,
+) -> Result<Region, SourcegenError> {
+    let from_span = if attr_pos + 1 < item.attrs.len() {
+        // We have more attributes -- take the next
+        item.attrs[attr_pos + 1].span()
+    } else if item.vis != Visibility::Inherited {
+        // Otherwise, take visibility modifier
+        item.vis.span()
+    } else {
+        // Lastly, take the `mod` token
+        item.mod_token.span()
+    };
+    let to_span = if let Some(semi) = item.semi {
+        semi.span()
+    } else if let Some(ref content) = item.content {
+        content.0.span
+    } else {
+        item.ident.span()
     };
 
     let from = line_column_to_offset(source, from_span.start())?;
