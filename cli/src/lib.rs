@@ -11,14 +11,14 @@ use std::collections::HashMap;
 use std::path::Path;
 
 mod error;
-mod expand;
+mod generate;
 mod mods;
 mod rustfmt;
 
 /// Trait to be implemented by source generators.
 pub trait SourceGenerator {
     /// Expand struct definition. Return `None` if no changes are necessary.
-    fn expand_struct(
+    fn generate_struct(
         &self,
         _args: syn::AttributeArgs,
         _item: &syn::ItemStruct,
@@ -27,7 +27,7 @@ pub trait SourceGenerator {
     }
 
     /// Expand enum definition. Return `None` if no changes are necessary.
-    fn expand_enum(
+    fn generate_enum(
         &self,
         _args: syn::AttributeArgs,
         _item: &syn::ItemEnum,
@@ -78,9 +78,9 @@ pub fn run_sourcegen(parameters: &SourcegenParameters) -> Result<(), SourcegenEr
         .filter(|p| p.dependencies.iter().any(|dep| dep.name == "sourcegen"));
 
     for package in packages {
-        eprintln!("Running for crate '{}'", package.name);
+        eprintln!("Generating source code in crate '{}'", package.name);
         for target in &package.targets {
-            self::expand::process_source_file(&target.src_path, &generators, true)?;
+            self::generate::process_source_file(&target.src_path, &generators, true)?;
         }
     }
     Ok(())

@@ -24,7 +24,7 @@ struct GenerateEnum;
 /// Enum source generator -- generates X amount of literals in enum where X is provided
 /// via `count = X` attribute argument.
 impl SourceGenerator for GenerateEnum {
-    fn expand_enum(
+    fn generate_enum(
         &self,
         args: syn::AttributeArgs,
         item: &syn::ItemEnum,
@@ -50,7 +50,7 @@ struct GenerateStruct;
 /// Struct source generator -- generates X amount of fields in struct where X is provided
 /// via `count = X` attribute argument.
 impl SourceGenerator for GenerateStruct {
-    fn expand_struct(
+    fn generate_struct(
         &self,
         args: syn::AttributeArgs,
         item: &syn::ItemStruct,

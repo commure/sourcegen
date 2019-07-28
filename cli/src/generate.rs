@@ -37,7 +37,7 @@ pub fn process_source_file(
         &mut replacements,
     )?;
 
-    let output = render_expansions(&source, &replacements)?;
+    let output = render_expansions(path, &source, &replacements)?;
 
     if source != output {
         std::fs::write(path, output)
@@ -46,7 +46,9 @@ pub fn process_source_file(
     Ok(())
 }
 
+/// `basefile` is used to tell `rustfmt` which configuration to use.
 fn render_expansions(
+    basefile: &Path,
     source: &str,
     expansions: &BTreeMap<Region, TokenStream>,
 ) -> Result<String, SourcegenError> {
@@ -58,7 +60,7 @@ fn render_expansions(
         output += &source[offset..region.from];
         offset = region.to;
         let indent = format!("{:indent$}", "", indent = region.indent);
-        let formatted = formatter.format(&replacement.to_string())?;
+        let formatted = formatter.format(basefile, &replacement.to_string())?;
 
         let mut first = true;
         for line in formatted.lines() {
@@ -92,7 +94,7 @@ fn handle_content(
                     let context_location = invoke.context_location;
                     if let Some(expansion) = invoke
                         .generator
-                        .expand_enum(invoke.args, item)
+                        .generate_enum(invoke.args, item)
                         .with_context(|_| SourcegenErrorKind::GeneratorError(context_location))?
                     {
                         let region = enum_region(source, item, invoke.expand_attr_pos)?;
@@ -106,7 +108,7 @@ fn handle_content(
                     let context_location = invoke.context_location;
                     if let Some(expansion) = invoke
                         .generator
-                        .expand_struct(invoke.args, item)
+                        .generate_struct(invoke.args, item)
                         .with_context(|_| SourcegenErrorKind::GeneratorError(context_location))?
                     {
                         let region = struct_region(source, item, invoke.expand_attr_pos)?;

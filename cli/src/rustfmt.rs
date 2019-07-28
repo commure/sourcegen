@@ -1,11 +1,14 @@
 use crate::error::{SourcegenError, SourcegenErrorKind};
 use failure::ResultExt;
-use std::process::{Command, Stdio};
+use std::io::Write;
+use std::path::Path;
+use std::process::{Command, Output, Stdio};
 
 /// Rust code formatter. Uses an external `rustfmt` executable for formatting the code.
 pub struct Formatter {
     rustfmt: String,
-    tempdir: tempfile::TempDir,
+    // If we should make rustfmt to normalize doc attributes. Currently only works on nightly.
+    normalize_doc_attributes: bool,
 }
 
 impl Formatter {
@@ -30,40 +33,90 @@ impl Formatter {
         let version =
             String::from_utf8(version.stdout).context(SourcegenErrorKind::RustFmtVersionFailed)?;
 
-        // Setup a temporary directory
-        let tempdir = tempfile::Builder::new()
-            .prefix("source-expand")
-            .tempdir()
-            .context(SourcegenErrorKind::RustFmtSetup)?;
-
-        // Can only normalize doc comments on nightly!
-        // https://github.com/rust-lang/rustfmt/issues/3351
-        if version.contains("nightly") {
-            let cfg_path = tempdir.path().join("rustfmt.toml");
-            std::fs::write(cfg_path, "normalize_doc_attributes = true")
-                .context(SourcegenErrorKind::RustFmtSetup)?;
-        }
-        Ok(Self { rustfmt, tempdir })
+        let is_nightly = version.contains("nightly");
+        Ok(Self {
+            rustfmt,
+            normalize_doc_attributes: is_nightly,
+        })
     }
 
     /// Reformat generated block of code via rustfmt
-    pub fn format(&self, content: &str) -> Result<String, SourcegenError> {
-        let temp = tempfile::Builder::new()
-            .tempfile_in(&self.tempdir)
-            .context(SourcegenErrorKind::RustFmtFailed)?;
-        std::fs::write(temp.path(), content).context(SourcegenErrorKind::RustFmtFailed)?;
+    pub fn format(&self, basefile: &Path, content: &str) -> Result<String, SourcegenError> {
+        // This should be dropped after we are done with `rustfmt`, so declare it here.
+        let tempconfig;
+        let mut rustfmt = Command::new(self.rustfmt.trim());
 
-        let output = Command::new(self.rustfmt.trim())
-            .current_dir(&self.tempdir)
-            .arg(temp.path())
-            .output()
-            .context(SourcegenErrorKind::RustFmtFailed)?;
-        if output.status.success() {
-            Ok(std::fs::read_to_string(temp.path()).context(SourcegenErrorKind::RustFmtFailed)?)
-        } else {
-            let err =
-                String::from_utf8(output.stderr).context(SourcegenErrorKind::RustFmtFailed)?;
-            Err(SourcegenErrorKind::RustFmtError(err).into())
+        // If we are want to normalize doc attributes, capture `rustfmt` configuration and turn on
+        // `normalize_doc_attributes` flag in it.
+        if self.normalize_doc_attributes {
+            tempconfig = rustfmt_adjusted_config(self.rustfmt.trim(), basefile)?;
+            rustfmt.arg("--config-path").arg(tempconfig.path());
         }
+        let mut process = rustfmt
+            .current_dir(basefile.parent().unwrap())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .stdin(Stdio::piped())
+            .spawn()
+            .context(SourcegenErrorKind::RustFmtFailed)?;
+
+        process
+            .stdin
+            .as_mut()
+            .unwrap()
+            .write_all(content.as_bytes())
+            .context(SourcegenErrorKind::RustFmtFailed)?;
+        let output = process
+            .wait_with_output()
+            .context(SourcegenErrorKind::RustFmtFailed)?;
+        rustfmt_output(output)
     }
+}
+
+fn rustfmt_output(output: Output) -> Result<String, SourcegenError> {
+    if output.status.success() {
+        let result = String::from_utf8(output.stdout).context(SourcegenErrorKind::RustFmtFailed)?;
+        Ok(result)
+    } else {
+        let err = String::from_utf8(output.stderr).context(SourcegenErrorKind::RustFmtFailed)?;
+        Err(SourcegenErrorKind::RustFmtError(err).into())
+    }
+}
+
+/// Capture current `rustfmt` config that will be used for formatting given file.
+fn rustfmt_config(rustfmt: &str, basefile: &Path) -> Result<String, SourcegenError> {
+    // Note: was broken on stable, so we only do this on nightly.
+    // https://github.com/rust-lang/rustfmt/issues/3536
+    let output = Command::new(rustfmt)
+        .arg("--print-config")
+        .arg("current")
+        .arg(basefile)
+        .output()
+        .context(SourcegenErrorKind::RustFmtFailed)?;
+    rustfmt_output(output)
+}
+
+/// Generate adjusted rustfmt configuration. Currently the only adjustment we make is we turn on
+/// the `normalize_doc_attributes` flag so all `#[doc = ..]` comments are rendered as `///`.
+/// This currently only works on nightl `rustfmt`.
+fn rustfmt_adjusted_config(
+    rustfmt: &str,
+    basefile: &Path,
+) -> Result<tempfile::NamedTempFile, SourcegenError> {
+    let config = rustfmt_config(rustfmt, basefile)?;
+
+    // We do a naive string replacement here.
+    let config = config.replace(
+        "normalize_doc_attributes = false",
+        "normalize_doc_attributes = true",
+    );
+
+    let mut tempfile = tempfile::Builder::new()
+        .tempfile()
+        .context(SourcegenErrorKind::RustFmtFailed)?;
+
+    tempfile
+        .write_all(config.as_bytes())
+        .context(SourcegenErrorKind::RustFmtFailed)?;
+    Ok(tempfile)
 }
