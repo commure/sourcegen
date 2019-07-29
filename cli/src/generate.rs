@@ -8,7 +8,6 @@ use syn::export::ToTokens;
 use syn::spanned::Spanned;
 use syn::{
     Attribute, AttributeArgs, Ident, Item, ItemEnum, ItemMod, ItemStruct, LitStr, Meta, NestedMeta,
-    Visibility,
 };
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
@@ -60,7 +59,8 @@ fn render_expansions(
         output += &source[offset..region.from];
         offset = region.to;
         let indent = format!("{:indent$}", "", indent = region.indent);
-        let formatted = formatter.format(basefile, &replacement.to_string())?;
+        let replacement = format!("// Generated. All manual edits to the block annotated with #[sourcegen...] will be discarded.\n{}", replacement);
+        let formatted = formatter.format(basefile, &replacement)?;
 
         let mut first = true;
         for line in formatted.lines() {
@@ -146,25 +146,14 @@ fn handle_content(
 
 /// Detect the working region for the enums. The area starts after the `#[sourcegen]` attribute.
 fn enum_region(source: &str, item: &ItemEnum, attr_pos: usize) -> Result<Region, SourcegenError> {
-    let from_span = if attr_pos + 1 < item.attrs.len() {
-        // We have more attributes -- take the next
-        item.attrs[attr_pos + 1].span()
-    } else if item.vis != Visibility::Inherited {
-        // Otherwise, take visibility modifier
-        item.vis.span()
-    } else {
-        // Lastly, take the `enum` token
-        item.enum_token.span()
-    };
+    let from_loc = item.attrs[attr_pos].bracket_token.span.end();
+    let indent = item.attrs[attr_pos].span().start().column;
     let to_span = item.brace_token.span;
 
-    let from = line_column_to_offset(source, from_span.start())?;
+    let from = line_column_to_offset(source, from_loc)?;
     let to = line_column_to_offset(source, to_span.end())?;
-    Ok(Region {
-        from,
-        to,
-        indent: from_span.start().column,
-    })
+    let from = from + skip_whitespaces(&source[from..]);
+    Ok(Region { from, to, indent })
 }
 
 /// Detect the working region for the structs. The area starts after the `#[sourcegen]` attribute.
@@ -173,43 +162,24 @@ fn struct_region(
     item: &ItemStruct,
     attr_pos: usize,
 ) -> Result<Region, SourcegenError> {
-    let from_span = if attr_pos + 1 < item.attrs.len() {
-        // We have more attributes -- take the next
-        item.attrs[attr_pos + 1].span()
-    } else if item.vis != Visibility::Inherited {
-        // Otherwise, take visibility modifier
-        item.vis.span()
-    } else {
-        // Lastly, take the `struct` token
-        item.struct_token.span()
-    };
+    let from_loc = item.attrs[attr_pos].bracket_token.span.end();
+    let indent = item.attrs[attr_pos].span().start().column;
     let to_span = if let Some(semi) = item.semi_token {
         semi.span()
     } else {
         item.fields.span()
     };
 
-    let from = line_column_to_offset(source, from_span.start())?;
+    let from = line_column_to_offset(source, from_loc)?;
     let to = line_column_to_offset(source, to_span.end())?;
-    Ok(Region {
-        from,
-        to,
-        indent: from_span.start().column,
-    })
+    let from = from + skip_whitespaces(&source[from..]);
+    Ok(Region { from, to, indent })
 }
 
 /// Detect the working region for the mod. The area starts after the `#[sourcegen]` attribute.
 fn mod_region(source: &str, item: &ItemMod, attr_pos: usize) -> Result<Region, SourcegenError> {
-    let from_span = if attr_pos + 1 < item.attrs.len() {
-        // We have more attributes -- take the next
-        item.attrs[attr_pos + 1].span()
-    } else if item.vis != Visibility::Inherited {
-        // Otherwise, take visibility modifier
-        item.vis.span()
-    } else {
-        // Lastly, take the `mod` token
-        item.mod_token.span()
-    };
+    let from_loc = item.attrs[attr_pos].bracket_token.span.end();
+    let indent = item.attrs[attr_pos].span().start().column;
     let to_span = if let Some(semi) = item.semi {
         semi.span()
     } else if let Some(ref content) = item.content {
@@ -218,13 +188,10 @@ fn mod_region(source: &str, item: &ItemMod, attr_pos: usize) -> Result<Region, S
         item.ident.span()
     };
 
-    let from = line_column_to_offset(source, from_span.start())?;
+    let from = line_column_to_offset(source, from_loc)?;
     let to = line_column_to_offset(source, to_span.end())?;
-    Ok(Region {
-        from,
-        to,
-        indent: from_span.start().column,
-    })
+    let from = from + skip_whitespaces(&source[from..]);
+    Ok(Region { from, to, indent })
 }
 
 /// Collect parameters from `#[sourcegen]` attribute.
@@ -275,6 +242,12 @@ fn line_column_to_offset(text: &str, lc: LineColumn) -> Result<usize, SourcegenE
     }
     offset += lc.column;
     Ok(offset.min(text.len()))
+}
+
+fn skip_whitespaces(text: &str) -> usize {
+    let end = text.trim_start().as_ptr() as usize;
+    let start = text.as_ptr() as usize;
+    end - start
 }
 
 struct GeneratorInfo<'a> {

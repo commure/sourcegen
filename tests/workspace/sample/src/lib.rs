@@ -3,6 +3,7 @@ use sourcegen::sourcegen;
 /// The contents of the following enum will be replaced with the enum rendered with the given amount
 /// of literals.
 #[sourcegen(generator = "generate-enum", count = 3)]
+// Generated. All manual edits to the block annotated with #[sourcegen...] will be discarded.
 /// This comment is generated
 pub enum TestEnum {
     Literal0,
@@ -13,6 +14,7 @@ pub enum TestEnum {
 /// The contents of the following enum will be replaced with the enum rendered with the given amount
 /// of literals.
 #[sourcegen(generator = "generate-struct", count = 3)]
+// Generated. All manual edits to the block annotated with #[sourcegen...] will be discarded.
 /// This comment is generated
 pub struct TestStruct {
     pub field0: usize,
@@ -23,6 +25,7 @@ pub struct TestStruct {
 /// Nesting works!
 pub mod nested {
     #[sourcegen::sourcegen(generator = "generate-enum", count = 3)]
+    // Generated. All manual edits to the block annotated with #[sourcegen...] will be discarded.
     /// This comment is generated
     pub enum TestEnum {
         Literal0,
@@ -38,6 +41,7 @@ pub mod two;
 pub mod five;
 
 #[sourcegen::sourcegen(generator = "generate-mod", count = 3)]
+// Generated. All manual edits to the block annotated with #[sourcegen...] will be discarded.
 /// This comment is generated
 pub mod generated {
     pub struct Struct0;
