@@ -7,7 +7,7 @@ use std::path::Path;
 use syn::export::ToTokens;
 use syn::spanned::Spanned;
 use syn::{
-    Attribute, AttributeArgs, Ident, Item, ItemEnum, ItemStruct, ItemMod, LitStr, Meta, NestedMeta,
+    Attribute, AttributeArgs, Ident, Item, ItemEnum, ItemMod, ItemStruct, LitStr, Meta, NestedMeta,
     Visibility,
 };
 
@@ -118,7 +118,6 @@ fn handle_content(
             }
 
             Item::Mod(item) => {
-
                 if let Some(invoke) = detect_invocation(path, &item.attrs, generators)? {
                     let context_location = invoke.context_location;
                     if let Some(expansion) = invoke
@@ -200,11 +199,7 @@ fn struct_region(
 }
 
 /// Detect the working region for the mod. The area starts after the `#[sourcegen]` attribute.
-fn mod_region(
-    source: &str,
-    item: &ItemMod,
-    attr_pos: usize,
-) -> Result<Region, SourcegenError> {
+fn mod_region(source: &str, item: &ItemMod, attr_pos: usize) -> Result<Region, SourcegenError> {
     let from_span = if attr_pos + 1 < item.attrs.len() {
         // We have more attributes -- take the next
         item.attrs[attr_pos + 1].span()
@@ -266,7 +261,7 @@ fn detect_invocation<'a>(
 fn line_column_to_offset(text: &str, lc: LineColumn) -> Result<usize, SourcegenError> {
     let mut line = lc.line as usize;
 
-    assert!(line != 0, "line number must be 1-indexed");
+    assert_ne!(line, 0, "line number must be 1-indexed");
 
     let mut offset = 0;
     for (idx, ch) in text.char_indices() {
