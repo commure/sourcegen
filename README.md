@@ -17,7 +17,7 @@ You start with the following code:
 struct Widget;
 ```
 
-Then, you run a special tool that is built on top of the `sourcegen-cli`:
+Then, you run a special tool that is built on top of the `sourcegen-cli` crate:
 
 ```sh
 cargo run --package json-schema-sourcegen
@@ -78,5 +78,5 @@ invalid code, recovering might require reverting the generated code via source c
 [Crate]: https://crates.io/crates/sourcegen-cli
 [Crate Logo]: https://img.shields.io/crates/v/sourcegen-cli.svg
 
-[Doc]: https://docs.rs/sourcegen
-[Doc Logo]: https://docs.rs/sourcegen/badge.svg
+[Doc]: https://docs.rs/sourcegen-cli
+[Doc Logo]: https://docs.rs/sourcegen-cli/badge.svg
