@@ -44,7 +44,7 @@ In the current form, you build your own tool on top of the `sourcegen_cli::run_t
 a number of input parameters and a list of source generators implementations.
 
 Source generators are similar to procedural macros, they take syntax as an input and return token stream as an output.
-Input to source generators use [`syn`](https://crates.io./syn) crate for representing syntax trees. Returned tokens are
+Input to source generators use [`syn`](https://crates.io./crates/syn) crate for representing syntax trees. Returned tokens are
 rendered by generators into the source code and formatted via `rustfmt`. 
 
 ## Rationale
