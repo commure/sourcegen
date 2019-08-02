@@ -11,6 +11,7 @@ pub fn main() {
             ("generate-enum", &GenerateEnum),
             ("generate-struct", &GenerateStruct),
             ("generate-mod", &GenerateMod),
+            ("generate-impl", &GenerateImpl)
         ],
         ..Default::default()
     };
@@ -55,6 +56,7 @@ impl SourceGenerator for GenerateStruct {
         &self,
         args: syn::AttributeArgs,
         item: &syn::ItemStruct,
+
     ) -> Result<Option<TokenStream>, Error> {
         let count = find_count(&args);
         let lits = (0..count).map(|idx| {
@@ -93,6 +95,39 @@ impl SourceGenerator for GenerateMod {
             /// This comment is generated
             #vis mod #ident {
                 #(pub struct #lits;)*
+            }
+        }))
+    }
+}
+
+struct GenerateImpl;
+
+impl SourceGenerator for GenerateImpl {
+    fn generate_struct(
+        &self,
+        args: syn::AttributeArgs,
+        item: &syn::ItemStruct,
+
+    ) -> Result<Option<TokenStream>, Error> {
+        let count = find_count(&args);
+        let lits = (0..count).map(|idx| {
+            let lit = Ident::new(&format!("field{}", idx), Span::call_site());
+            quote!(#lit)
+        });
+        let vis = &item.vis;
+        let ident = &item.ident;
+        Ok(Some(quote! {
+            /// This comment is generated
+            #vis struct #ident {
+                #(pub #lits: usize),*
+            }
+
+            /// Generated comment on impl
+            #[sourcegen::generated]
+            impl #ident {
+                fn hello() {
+                    println!("hello");
+                }
             }
         }))
     }
