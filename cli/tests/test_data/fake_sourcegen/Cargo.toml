@@ -1,0 +1,6 @@
+[package]
+name = "sourcegen"
+version = "0.0.0"
+description = """
+Empty crate for test purposes -- sourcegen looks at Cargo.toml's `sourcegen` dependency; we use this crate as one.
+"""

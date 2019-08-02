@@ -10,9 +10,18 @@ description = """
 In-place Rust source generator CLI utility.
 """
 
+[[test]]
+name = "suite"
+harness = false
+
 [dependencies]
 syn = { version = "0.15.42", features = ["full"] }
 proc-macro2 = { version = "0.4.30", features = ["span-locations"] }
 cargo_metadata = "0.8.1"
 failure = "0.1.5"
 tempfile = "3.0.8"
+
+[dev-dependencies]
+quote = "0.6.13"
+copy_dir = "0.1.2"
+pretty_assertions = "0.6.1"
