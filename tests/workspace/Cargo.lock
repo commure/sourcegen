@@ -83,7 +83,7 @@ dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.6.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "sourcegen-cli 0.1.0",
+ "sourcegen-cli 0.1.1",
  "syn 0.15.42 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -200,7 +200,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "sample"
 version = "0.1.0"
 dependencies = [
- "sourcegen 0.1.0",
+ "sourcegen 0.1.1",
 ]
 
 [[package]]
@@ -244,11 +244,11 @@ dependencies = [
 
 [[package]]
 name = "sourcegen"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "sourcegen-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cargo_metadata 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
