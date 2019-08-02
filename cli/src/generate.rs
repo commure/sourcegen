@@ -25,13 +25,13 @@ pub fn process_source_file(
 ) -> Result<(), SourcegenError> {
     let source = std::fs::read_to_string(path)
         .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
-    let file = syn::parse_file(&source)
+    let mut file = syn::parse_file(&source)
         .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
     let mut replacements = BTreeMap::new();
     handle_content(
         path,
         &source,
-        &file.items,
+        &mut file.items,
         &generators,
         is_root,
         &mut replacements,
@@ -84,54 +84,54 @@ fn render_expansions(
 fn handle_content(
     path: &Path,
     source: &str,
-    items: &[Item],
+    items: &mut [Item],
     generators: &GeneratorsMap,
     is_root: bool,
     replacements: &mut BTreeMap<Region, TokenStream>,
 ) -> Result<(), SourcegenError> {
     for item in items {
         match item {
-            Item::Enum(item) => {
-                if let Some(invoke) = detect_invocation(path, &item.attrs, generators)? {
+            Item::Enum(ref mut item) => {
+                if let Some(invoke) = detect_invocation(path, &mut item.attrs, generators)? {
                     let context_location = invoke.context_location;
                     if let Some(expansion) = invoke
                         .generator
                         .generate_enum(invoke.args, item)
                         .with_context(|_| SourcegenErrorKind::GeneratorError(context_location))?
                     {
-                        let region = enum_region(source, item, invoke.expand_attr_pos)?;
+                        let region = enum_region(source, item, &invoke.sourcegen_attr)?;
                         replacements.insert(region, expansion);
                     }
                 }
             }
 
-            Item::Struct(item) => {
-                if let Some(invoke) = detect_invocation(path, &item.attrs, generators)? {
+            Item::Struct(ref mut item) => {
+                if let Some(invoke) = detect_invocation(path, &mut item.attrs, generators)? {
                     let context_location = invoke.context_location;
                     if let Some(expansion) = invoke
                         .generator
                         .generate_struct(invoke.args, item)
                         .with_context(|_| SourcegenErrorKind::GeneratorError(context_location))?
                     {
-                        let region = struct_region(source, item, invoke.expand_attr_pos)?;
+                        let region = struct_region(source, item, &invoke.sourcegen_attr)?;
                         replacements.insert(region, expansion);
                     }
                 }
             }
 
-            Item::Mod(item) => {
-                if let Some(invoke) = detect_invocation(path, &item.attrs, generators)? {
+            Item::Mod(ref mut item) => {
+                if let Some(invoke) = detect_invocation(path, &mut item.attrs, generators)? {
                     let context_location = invoke.context_location;
                     if let Some(expansion) = invoke
                         .generator
                         .generate_mod(invoke.args, item)
                         .with_context(|_| SourcegenErrorKind::GeneratorError(context_location))?
                     {
-                        let region = mod_region(source, item, invoke.expand_attr_pos)?;
+                        let region = mod_region(source, item, &invoke.sourcegen_attr)?;
                         replacements.insert(region, expansion);
                     }
                 } else if item.content.is_some() {
-                    let items = &item.content.as_ref().unwrap().1;
+                    let items = &mut item.content.as_mut().unwrap().1;
                     handle_content(path, source, items, generators, false, replacements)?;
                 } else {
                     let mod_file = crate::mods::resolve_module(path, &item, is_root)?;
@@ -166,9 +166,9 @@ fn impl_region(source: &str, item: &ItemImpl) -> Result<Region, SourcegenError> 
 }
 
 /// Detect the working region for the enums. The area starts after the `#[sourcegen]` attribute.
-fn enum_region(source: &str, item: &ItemEnum, attr_pos: usize) -> Result<Region, SourcegenError> {
-    let from_loc = item.attrs[attr_pos].bracket_token.span.end();
-    let indent = item.attrs[attr_pos].span().start().column;
+fn enum_region(source: &str, item: &ItemEnum, anchor_attr: &Attribute) -> Result<Region, SourcegenError> {
+    let from_loc = anchor_attr.bracket_token.span.end();
+    let indent = anchor_attr.span().start().column;
     let to_span = item.brace_token.span;
 
     let from = line_column_to_offset(source, from_loc)?;
@@ -181,10 +181,10 @@ fn enum_region(source: &str, item: &ItemEnum, attr_pos: usize) -> Result<Region,
 fn struct_region(
     source: &str,
     item: &ItemStruct,
-    attr_pos: usize,
+    anchor_attr: &Attribute,
 ) -> Result<Region, SourcegenError> {
-    let from_loc = item.attrs[attr_pos].bracket_token.span.end();
-    let indent = item.attrs[attr_pos].span().start().column;
+    let from_loc = anchor_attr.bracket_token.span.end();
+    let indent = anchor_attr.span().start().column;
     let to_span = if let Some(semi) = item.semi_token {
         semi.span()
     } else {
@@ -198,9 +198,9 @@ fn struct_region(
 }
 
 /// Detect the working region for the mod. The area starts after the `#[sourcegen]` attribute.
-fn mod_region(source: &str, item: &ItemMod, attr_pos: usize) -> Result<Region, SourcegenError> {
-    let from_loc = item.attrs[attr_pos].bracket_token.span.end();
-    let indent = item.attrs[attr_pos].span().start().column;
+fn mod_region(source: &str, item: &ItemMod, anchor_attr: &Attribute) -> Result<Region, SourcegenError> {
+    let from_loc = anchor_attr.bracket_token.span.end();
+    let indent = anchor_attr.span().start().column;
     let to_span = if let Some(semi) = item.semi {
         semi.span()
     } else if let Some(ref content) = item.content {
@@ -236,7 +236,7 @@ fn detect_impl_removal(attrs: &[Attribute]) -> bool {
 /// Collect parameters from `#[sourcegen]` attribute.
 fn detect_invocation<'a>(
     path: &Path,
-    attrs: &[Attribute],
+    attrs: &mut Vec<Attribute>,
     generators: &'a GeneratorsMap,
 ) -> Result<Option<GeneratorInfo<'a>>, SourcegenError> {
     let sourcegen_attr = attrs.iter().position(|attr| {
@@ -246,17 +246,8 @@ fn detect_invocation<'a>(
             .map_or(false, |segment| segment.value().ident == "sourcegen")
     });
     if let Some(attr_pos) = sourcegen_attr {
-        let loc = Location::from_path_span(path, attrs[attr_pos].span());
-        let mut tokens = TokenStream::new();
-        // Fake `#[sourcegen(<attrs>)]` attribute as `parse_meta` does not like if we have
-        // `#[sourcegen::sourcegen(<attrs>)]`
-        Ident::new("sourcegen", attrs[attr_pos].span()).to_tokens(&mut tokens);
-        attrs[attr_pos].tts.to_tokens(&mut tokens);
-        let meta: Meta = syn::parse2(tokens)
-            .with_context(|_| SourcegenErrorKind::GeneratorError(loc.clone()))?;
-        let mut invoke = detect_generator(path, meta, generators)?;
-        invoke.expand_attr_pos = attr_pos;
-
+        let sourcegen_attr = attrs.drain(0..attr_pos+1).last().unwrap();
+        let invoke = detect_generator(path, sourcegen_attr, generators)?;
         Ok(Some(invoke))
     } else {
         Ok(None)
@@ -293,17 +284,19 @@ struct GeneratorInfo<'a> {
     /// Source generator to run
     generator: &'a dyn SourceGenerator,
     args: AttributeArgs,
-    /// Used for figuring out the location to splice the code
-    expand_attr_pos: usize,
+    /// `#[sourcegen]` attribute itself
+    sourcegen_attr: Attribute,
     /// Location for error reporting
     context_location: Location,
 }
 
 fn detect_generator<'a>(
     path: &Path,
-    meta: Meta,
+    sourcegen_attr: Attribute,
     generators: &'a GeneratorsMap,
 ) -> Result<GeneratorInfo<'a>, SourcegenError> {
+    let meta = parse_sourcegen_attr(path, &sourcegen_attr)?;
+
     let meta_span = meta.span();
     if let Meta::List(list) = meta {
         let mut name: Option<&LitStr> = None;
@@ -338,8 +331,7 @@ fn detect_generator<'a>(
             return Ok(GeneratorInfo {
                 generator,
                 args,
-                // We set it later
-                expand_attr_pos: 0,
+                sourcegen_attr,
                 context_location,
             });
         }
@@ -347,4 +339,16 @@ fn detect_generator<'a>(
 
     let loc = Location::from_path_span(path, meta_span);
     Err(SourcegenErrorKind::MissingGeneratorAttribute(loc).into())
+}
+
+fn parse_sourcegen_attr(path: &Path, sourcegen_attr: &Attribute) -> Result<Meta, SourcegenError> {
+    let loc = Location::from_path_span(path, sourcegen_attr.span());
+    let mut tokens = TokenStream::new();
+    // Fake `#[sourcegen(<attrs>)]` attribute as `parse_meta` does not like if we have
+    // `#[sourcegen::sourcegen(<attrs>)]`
+    Ident::new("sourcegen", sourcegen_attr.span()).to_tokens(&mut tokens);
+    sourcegen_attr.tts.to_tokens(&mut tokens);
+    let meta: Meta = syn::parse2(tokens)
+        .with_context(|_| SourcegenErrorKind::GeneratorError(loc.clone()))?;
+    Ok(meta)
 }
