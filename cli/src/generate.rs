@@ -56,6 +56,7 @@ fn render_expansions(
     let formatter = crate::rustfmt::Formatter::new()?;
 
     let mut offset = 0;
+    let is_cr_lf = is_cr_lf(source);
     for (region, replacement) in expansions {
         output += &source[offset..region.from];
         offset = region.to;
@@ -70,6 +71,9 @@ fn render_expansions(
                 if first {
                     first = false
                 } else {
+                    if is_cr_lf {
+                        output.push('\r');
+                    }
                     output.push('\n');
                     output += &indent;
                 }
@@ -359,4 +363,13 @@ fn parse_sourcegen_attr(path: &Path, sourcegen_attr: &Attribute) -> Result<Meta,
     let meta: Meta =
         syn::parse2(tokens).with_context(|_| SourcegenErrorKind::GeneratorError(loc.clone()))?;
     Ok(meta)
+}
+
+/// Look at the first newline and decide if we should use `\r\n` (Windows).
+fn is_cr_lf(source: &str) -> bool {
+    if let Some(pos) = source.find('\n') {
+        source[..pos].ends_with('\r')
+    } else {
+        false
+    }
 }

@@ -1,11 +1,14 @@
 use failure::Error;
 use sourcegen_cli::SourcegenParameters;
 use std::path::Path;
+use std::process::Command;
 
 pub mod generators;
 pub mod helpers;
 
 fn main() -> Result<(), Error> {
+    install_rustfmt()?;
+
     let temp = tempfile::tempdir()?;
     let root = temp.path().join("root");
     copy_dir::copy_dir("tests/test_data", &root)?;
@@ -21,6 +24,25 @@ fn main() -> Result<(), Error> {
         }
     }
 
+    Ok(())
+}
+
+fn install_rustfmt() -> Result<(), Error> {
+    let output = Command::new("rustup")
+        .arg("component")
+        .arg("add")
+        .arg("rustfmt")
+        .output()?;
+
+    // Ignore status, but print to the console
+    if !output.status.success() {
+        let err = String::from_utf8(output.stderr)?;
+        eprintln!(
+            "Warning: failed to install rust fmt (exit code {}): {}",
+            output.status.code().unwrap_or(0),
+            err
+        );
+    }
     Ok(())
 }
 
