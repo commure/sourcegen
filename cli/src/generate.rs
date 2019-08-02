@@ -166,7 +166,11 @@ fn impl_region(source: &str, item: &ItemImpl) -> Result<Region, SourcegenError> 
 }
 
 /// Detect the working region for the enums. The area starts after the `#[sourcegen]` attribute.
-fn enum_region(source: &str, item: &ItemEnum, anchor_attr: &Attribute) -> Result<Region, SourcegenError> {
+fn enum_region(
+    source: &str,
+    item: &ItemEnum,
+    anchor_attr: &Attribute,
+) -> Result<Region, SourcegenError> {
     let from_loc = anchor_attr.bracket_token.span.end();
     let indent = anchor_attr.span().start().column;
     let to_span = item.brace_token.span;
@@ -198,7 +202,11 @@ fn struct_region(
 }
 
 /// Detect the working region for the mod. The area starts after the `#[sourcegen]` attribute.
-fn mod_region(source: &str, item: &ItemMod, anchor_attr: &Attribute) -> Result<Region, SourcegenError> {
+fn mod_region(
+    source: &str,
+    item: &ItemMod,
+    anchor_attr: &Attribute,
+) -> Result<Region, SourcegenError> {
     let from_loc = anchor_attr.bracket_token.span.end();
     let indent = anchor_attr.span().start().column;
     let to_span = if let Some(semi) = item.semi {
@@ -246,7 +254,7 @@ fn detect_invocation<'a>(
             .map_or(false, |segment| segment.value().ident == "sourcegen")
     });
     if let Some(attr_pos) = sourcegen_attr {
-        let sourcegen_attr = attrs.drain(0..attr_pos+1).last().unwrap();
+        let sourcegen_attr = attrs.drain(0..attr_pos + 1).last().unwrap();
         let invoke = detect_generator(path, sourcegen_attr, generators)?;
         Ok(Some(invoke))
     } else {
@@ -348,7 +356,7 @@ fn parse_sourcegen_attr(path: &Path, sourcegen_attr: &Attribute) -> Result<Meta,
     // `#[sourcegen::sourcegen(<attrs>)]`
     Ident::new("sourcegen", sourcegen_attr.span()).to_tokens(&mut tokens);
     sourcegen_attr.tts.to_tokens(&mut tokens);
-    let meta: Meta = syn::parse2(tokens)
-        .with_context(|_| SourcegenErrorKind::GeneratorError(loc.clone()))?;
+    let meta: Meta =
+        syn::parse2(tokens).with_context(|_| SourcegenErrorKind::GeneratorError(loc.clone()))?;
     Ok(meta)
 }
