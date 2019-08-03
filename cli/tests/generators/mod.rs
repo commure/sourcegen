@@ -51,7 +51,44 @@ impl SourceGenerator for GenerateImpls {
             #vis struct #ident;
 
             #[sourcegen::generated]
-            impl Boo for #ident {}
+            impl #ident {}
+        }))
+    }
+}
+
+pub struct GenerateSimple;
+
+impl SourceGenerator for GenerateSimple {
+    fn generate_struct(
+        &self,
+        _args: syn::AttributeArgs,
+        item: &syn::ItemStruct,
+    ) -> Result<Option<TokenStream>, Error> {
+        let vis = &item.vis;
+        let ident = &item.ident;
+        Ok(Some(quote! {
+            #vis struct #ident {
+                pub hello: String,
+            }
+        }))
+    }
+}
+
+pub struct GenerateDocComments;
+
+impl SourceGenerator for GenerateDocComments {
+    fn generate_struct(
+        &self,
+        _args: syn::AttributeArgs,
+        item: &syn::ItemStruct,
+    ) -> Result<Option<TokenStream>, Error> {
+        let vis = &item.vis;
+        let ident = &item.ident;
+        Ok(Some(quote! {
+            /// Some generated comment here
+            #vis struct #ident {
+                pub hello: String,
+            }
         }))
     }
 }

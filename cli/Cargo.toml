@@ -20,6 +20,7 @@ proc-macro2 = { version = "0.4.30", features = ["span-locations"] }
 cargo_metadata = "0.8.1"
 failure = "0.1.5"
 tempfile = "3.0.8"
+dunce = "1.0.0"
 
 [dev-dependencies]
 quote = "0.6.13"

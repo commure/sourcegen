@@ -50,7 +50,7 @@ fn render_expansions(
     expansions: &BTreeMap<Region, TokenStream>,
 ) -> Result<String, SourcegenError> {
     let mut output = String::with_capacity(source.len());
-    let formatter = crate::rustfmt::Formatter::new()?;
+    let formatter = crate::rustfmt::Formatter::new(basefile.parent().unwrap())?;
 
     let mut offset = 0;
     let is_cr_lf = is_cr_lf(source);

@@ -10,8 +10,10 @@ pub struct Formatter {
 }
 
 impl Formatter {
-    pub fn new() -> Result<Self, SourcegenError> {
+    pub fn new(root: &Path) -> Result<Self, SourcegenError> {
+        let basedir = dunce::canonicalize(root).context(SourcegenErrorKind::WhichRustFmtFailed)?;
         let output = Command::new("rustup")
+            .current_dir(basedir)
             .arg("which")
             .arg("rustfmt")
             .stderr(Stdio::null())
@@ -20,16 +22,19 @@ impl Formatter {
         if !output.status.success() {
             return Err(SourcegenErrorKind::NoRustFmt.into());
         }
-        let rustfmt =
-            String::from_utf8(output.stdout).context(SourcegenErrorKind::WhichRustFmtFailed)?;
-
+        let rustfmt = String::from_utf8(output.stdout)
+            .context(SourcegenErrorKind::WhichRustFmtFailed)?
+            .trim()
+            .to_owned();
         Ok(Self { rustfmt })
     }
 
     /// Reformat generated block of code via rustfmt
     pub fn format(&self, basefile: &Path, content: &str) -> Result<String, SourcegenError> {
-        let mut rustfmt = Command::new(self.rustfmt.trim())
-            .current_dir(basefile.parent().unwrap())
+        let basedir = dunce::canonicalize(basefile.parent().unwrap())
+            .context(SourcegenErrorKind::RustFmtFailed)?;
+        let mut rustfmt = Command::new(&self.rustfmt)
+            .current_dir(basedir)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .stdin(Stdio::piped())
