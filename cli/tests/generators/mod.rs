@@ -36,3 +36,22 @@ impl SourceGenerator for WriteBack {
         }))
     }
 }
+
+pub struct GenerateImpls;
+
+impl SourceGenerator for GenerateImpls {
+    fn generate_struct(
+        &self,
+        _args: syn::AttributeArgs,
+        item: &syn::ItemStruct,
+    ) -> Result<Option<TokenStream>, Error> {
+        let vis = &item.vis;
+        let ident = &item.ident;
+        Ok(Some(quote! {
+            #vis struct #ident;
+
+            #[sourcegen::generated]
+            impl Boo for #ident {}
+        }))
+    }
+}

@@ -12,7 +12,7 @@ fn main() -> Result<(), Error> {
     let temp = tempfile::tempdir()?;
     let root = temp.path().join("root");
     copy_dir::copy_dir("tests/test_data", &root)?;
-    for entry in std::fs::read_dir(root)? {
+    for entry in std::fs::read_dir(&root)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_dir()
@@ -20,6 +20,7 @@ fn main() -> Result<(), Error> {
                 .file_name()
                 .map_or(true, |name| name != "fake_sourcegen")
         {
+            eprintln!("running test for '{}'", path.strip_prefix(&root)?.display());
             run_test_dir(&path)?;
         }
     }
@@ -49,7 +50,10 @@ fn install_rustfmt() -> Result<(), Error> {
 fn parameters(manifest: &Path) -> SourcegenParameters {
     SourcegenParameters {
         manifest: Some(manifest),
-        generators: &[("write-back", &self::generators::WriteBack)],
+        generators: &[
+            ("write-back", &self::generators::WriteBack),
+            ("generate-impls", &self::generators::GenerateImpls),
+        ],
         ..Default::default()
     }
 }
