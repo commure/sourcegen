@@ -2,7 +2,7 @@
 // Generated. All manual edits to the block annotated with #[sourcegen...] will be discarded.
 struct Hello;
 #[sourcegen::generated]
-impl Boo for Hello {}
+impl Hello {}
 
 struct Irrelevant;
 
@@ -10,4 +10,4 @@ struct Irrelevant;
 // Generated. All manual edits to the block annotated with #[sourcegen...] will be discarded.
 struct Hello2;
 #[sourcegen::generated]
-impl Boo for Hello2 {}
+impl Hello2 {}

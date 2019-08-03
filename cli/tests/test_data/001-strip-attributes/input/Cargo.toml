@@ -1,6 +1,8 @@
 [package]
-name = "001-strip-attributes"
+name = "test"
 version = "0.0.0"
 
 [dependencies]
 sourcegen = { path = "../../fake_sourcegen" }
+
+[workspace]

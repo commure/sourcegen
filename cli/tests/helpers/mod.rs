@@ -1,6 +1,7 @@
 use failure::Error;
 use pretty_assertions::assert_eq as pretty_assert_eq;
 use std::path::Path;
+use std::process::Command;
 
 /// Assert that all files at `expected` path exist at `actual` path and the contents of the files
 /// is the same.
@@ -77,4 +78,25 @@ impl<'a> std::fmt::Debug for PrettyString<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.write_str(self.0)
     }
+}
+
+/// Install `rustfmt` component so our generator can use it.
+pub fn install_rustfmt(path: &Path) -> Result<(), Error> {
+    let output = Command::new("rustup")
+        .arg("component")
+        .arg("add")
+        .arg("rustfmt")
+        .current_dir(path.canonicalize()?)
+        .output()?;
+
+    // Ignore status, but print to the console
+    if !output.status.success() {
+        let err = String::from_utf8(output.stderr)?;
+        eprintln!(
+            "Warning: failed to install rust fmt (exit code {}): {}",
+            output.status.code().unwrap_or(0),
+            err
+        );
+    }
+    Ok(())
 }
