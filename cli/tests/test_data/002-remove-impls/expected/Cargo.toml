@@ -1,5 +1,5 @@
 [package]
-name = "001-strip-attributes"
+name = "002-remove-impls"
 version = "0.0.0"
 
 [dependencies]

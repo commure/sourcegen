@@ -13,6 +13,7 @@ use std::path::Path;
 mod error;
 mod generate;
 mod mods;
+mod region;
 mod rustfmt;
 
 /// Trait to be implemented by source generators.

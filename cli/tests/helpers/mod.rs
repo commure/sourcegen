@@ -50,12 +50,15 @@ pub fn assert_matches_expected(base: &Path, actual: &Path, expected: &Path) -> R
             let name = actual_child.file_name();
             let expected_child = expected.join(&name);
 
-            assert!(
-                expected_child.exists(),
-                "actual file '{}' does not exists in expected output '{}'",
-                Path::new(&name).display(),
-                actual.strip_prefix(base)?.display()
-            );
+            // We ignore Cargo.lock
+            if name != "Cargo.lock" {
+                assert!(
+                    expected_child.exists(),
+                    "actual file '{}' does not exists in expected output '{}'",
+                    Path::new(&name).display(),
+                    actual.strip_prefix(base)?.display()
+                );
+            }
         }
     }
 
