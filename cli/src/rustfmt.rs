@@ -30,7 +30,11 @@ impl Formatter {
     }
 
     /// Reformat generated block of code via rustfmt
-    pub fn format(&self, basefile: &Path, content: &str) -> Result<String, SourcegenError> {
+    pub fn format(
+        &self,
+        basefile: &Path,
+        content: impl std::fmt::Display,
+    ) -> Result<String, SourcegenError> {
         let basedir = dunce::canonicalize(basefile.parent().unwrap())
             .context(SourcegenErrorKind::RustFmtFailed)?;
         let mut rustfmt = Command::new(&self.rustfmt)
@@ -41,12 +45,8 @@ impl Formatter {
             .spawn()
             .context(SourcegenErrorKind::RustFmtFailed)?;
 
-        rustfmt
-            .stdin
-            .as_mut()
-            .unwrap()
-            .write_all(content.as_bytes())
-            .context(SourcegenErrorKind::RustFmtFailed)?;
+        let write = rustfmt.stdin.as_mut().unwrap();
+        write!(write, "{}", content).context(SourcegenErrorKind::RustFmtFailed)?;
         let output = rustfmt
             .wait_with_output()
             .context(SourcegenErrorKind::RustFmtFailed)?;

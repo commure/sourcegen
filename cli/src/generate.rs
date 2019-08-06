@@ -8,6 +8,10 @@ use syn::export::ToTokens;
 use syn::spanned::Spanned;
 use syn::{Attribute, AttributeArgs, Ident, Item, LitStr, Meta, NestedMeta};
 
+static ITEM_COMMENT: &str =
+    "// Generated. All manual edits to the block annotated with #[sourcegen...] will be discarded.";
+static FILE_COMMENT: &str = "// Generated. All manual edits below this line will be discarded.";
+
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
 struct Region {
     from: usize,
@@ -24,17 +28,44 @@ pub fn process_source_file(
         .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
     let mut file = syn::parse_file(&source)
         .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
-    let mut replacements = BTreeMap::new();
-    handle_content(
-        path,
-        &source,
-        &mut file.items,
-        &generators,
-        is_root,
-        &mut replacements,
-    )?;
 
-    let output = render_expansions(path, &source, &replacements)?;
+    let output = if let Some(invoke) = detect_invocation(path, &mut file.attrs, generators)? {
+        // Handle full file generation
+        let context_location = invoke.context_location;
+        let result = invoke
+            .generator
+            .generate_file(invoke.args, &file)
+            .with_context(|_| SourcegenErrorKind::GeneratorError(context_location))?;
+        if let Some(expansion) = result {
+            let from_loc = invoke.sourcegen_attr.bracket_token.span.end();
+            let from = line_column_to_offset(&source, from_loc)?;
+            let from = from + skip_whitespaces(&source[from..]);
+            let region = Region {
+                from,
+                to: source.len(),
+                indent: 0,
+            };
+
+            // Replace the whole file
+            let mut replacements = BTreeMap::new();
+            replacements.insert(region, expansion);
+            render_expansions(path, &source, &replacements, FILE_COMMENT)?
+        } else {
+            // Nothing to replace
+            return Ok(());
+        }
+    } else {
+        let mut replacements = BTreeMap::new();
+        handle_content(
+            path,
+            &source,
+            &mut file.items,
+            &generators,
+            is_root,
+            &mut replacements,
+        )?;
+        render_expansions(path, &source, &replacements, ITEM_COMMENT)?
+    };
 
     if source != output {
         std::fs::write(path, output)
@@ -43,24 +74,32 @@ pub fn process_source_file(
     Ok(())
 }
 
-/// `basefile` is used to tell `rustfmt` which configuration to use.
+/// Render given list of replacements into the source file. `basefile` is used to determine base
+/// directory to run `rustfmt` in (so it can use local overrides for formatting rules).
+///
+/// `comment` is the warning comment that will be added in front of each generated block.
 fn render_expansions(
     basefile: &Path,
     source: &str,
     expansions: &BTreeMap<Region, TokenStream>,
+    comment: &str,
 ) -> Result<String, SourcegenError> {
     let mut output = String::with_capacity(source.len());
     let formatter = crate::rustfmt::Formatter::new(basefile.parent().unwrap())?;
 
     let mut offset = 0;
     let is_cr_lf = is_cr_lf(source);
-    for (region, replacement) in expansions {
+    for (region, tokens) in expansions {
         output += &source[offset..region.from];
         offset = region.to;
         let indent = format!("{:indent$}", "", indent = region.indent);
-        if !replacement.is_empty() {
-            let replacement = format!("// Generated. All manual edits to the block annotated with #[sourcegen...] will be discarded.\n{}", replacement);
-            let formatted = formatter.format(basefile, &replacement)?;
+        if !tokens.is_empty() {
+            let replacement = Replacement {
+                comment,
+                is_cr_lf,
+                tokens,
+            };
+            let formatted = formatter.format(basefile, replacement)?;
             let mut first = true;
             for line in formatted.lines() {
                 // We don't want newline on the last line (the captured region does not include the
@@ -108,6 +147,7 @@ fn handle_content(
                 let from = line_column_to_offset(source, from_loc)?;
                 let from = from + skip_whitespaces(&source[from..]);
 
+                // Find the first item that is not marked as "generated"
                 let skip_count = (0..tail.len())
                     .find(|pos| {
                         !is_generated(
@@ -290,5 +330,25 @@ fn is_cr_lf(source: &str) -> bool {
         source[..pos].ends_with('\r')
     } else {
         false
+    }
+}
+
+/// Struct used to generate replacement code directly into stdin of `rustfmt`.
+struct Replacement<'a> {
+    comment: &'a str,
+    is_cr_lf: bool,
+    tokens: &'a TokenStream,
+}
+
+impl std::fmt::Display for Replacement<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        use std::fmt::Write;
+
+        f.write_str(self.comment)?;
+        if self.is_cr_lf {
+            f.write_char('\r')?;
+        }
+        f.write_char('\n')?;
+        write!(f, "{}", self.tokens)
     }
 }

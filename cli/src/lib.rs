@@ -44,6 +44,15 @@ pub trait SourceGenerator {
     ) -> Result<Option<TokenStream>, Error> {
         Ok(None)
     }
+
+    /// Generate the whole file. Return `None` if no changes are necessary.
+    fn generate_file(
+        &self,
+        _args: syn::AttributeArgs,
+        _file: &syn::File,
+    ) -> Result<Option<TokenStream>, Error> {
+        Ok(None)
+    }
 }
 
 pub(crate) type GeneratorsMap<'a> = HashMap<&'a str, &'a dyn SourceGenerator>;
