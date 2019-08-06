@@ -3,6 +3,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use sourcegen_cli::SourceGenerator;
 
+/// Writes back the input without any changes
 pub struct WriteBack;
 
 impl SourceGenerator for WriteBack {
@@ -37,6 +38,7 @@ impl SourceGenerator for WriteBack {
     }
 }
 
+/// Generate some impls along with the struct itself
 pub struct GenerateImpls;
 
 impl SourceGenerator for GenerateImpls {
@@ -56,6 +58,7 @@ impl SourceGenerator for GenerateImpls {
     }
 }
 
+/// Generate one field in the struct
 pub struct GenerateSimple;
 
 impl SourceGenerator for GenerateSimple {
@@ -74,6 +77,7 @@ impl SourceGenerator for GenerateSimple {
     }
 }
 
+/// Generates a struct with a doc comment
 pub struct GenerateDocComments;
 
 impl SourceGenerator for GenerateDocComments {
@@ -87,6 +91,24 @@ impl SourceGenerator for GenerateDocComments {
         Ok(Some(quote! {
             /// Some generated comment here
             #vis struct #ident {
+                pub hello: String,
+            }
+        }))
+    }
+}
+
+/// Generate full file
+pub struct GenerateFile;
+
+impl SourceGenerator for GenerateFile {
+    fn generate_file(
+        &self,
+        _args: syn::AttributeArgs,
+        _file: &syn::File,
+    ) -> Result<Option<TokenStream>, Error> {
+        Ok(Some(quote! {
+            #[doc = r" Some generated comment here"]
+            struct Hello {
                 pub hello: String,
             }
         }))

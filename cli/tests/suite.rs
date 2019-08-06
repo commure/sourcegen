@@ -37,6 +37,7 @@ fn parameters(manifest: &Path) -> SourcegenParameters {
                 "generate-doc-comments",
                 &self::generators::GenerateDocComments,
             ),
+            ("generate-file", &self::generators::GenerateFile),
         ],
         ..Default::default()
     }
