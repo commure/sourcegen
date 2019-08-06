@@ -126,6 +126,13 @@ fn render_expansions(
             }
         }
     }
+    // Insert newline at the end of the file!
+    if offset == source.len() {
+        if is_cr_lf {
+            output.push('\r');
+        }
+        output.push('\n');
+    }
     output += &source[offset..];
     Ok(output)
 }
