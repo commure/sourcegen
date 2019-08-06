@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use syn::export::ToTokens;
 use syn::spanned::Spanned;
-use syn::{Attribute, AttributeArgs, Ident, Item, LitStr, Meta, NestedMeta};
+use syn::{Attribute, AttributeArgs, File, Ident, Item, LitStr, Meta, NestedMeta};
 
 static ITEM_COMMENT: &str =
     "// Generated. All manual edits to the block annotated with #[sourcegen...] will be discarded.";
@@ -29,7 +29,12 @@ pub fn process_source_file(
     let mut file = syn::parse_file(&source)
         .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
 
-    let output = if let Some(invoke) = detect_invocation(path, &mut file.attrs, generators)? {
+    let output = if let Some(invoke) = detect_file_invocation(path, &mut file, generators)? {
+        if !invoke.is_file {
+            // Remove all attributes in front of the `#![sourcegen]` attribute
+            file.attrs.drain(0..invoke.sourcegen_attr_index + 1);
+        }
+
         // Handle full file generation
         let context_location = invoke.context_location;
         let result = invoke
@@ -37,7 +42,11 @@ pub fn process_source_file(
             .generate_file(invoke.args, &file)
             .with_context(|_| SourcegenErrorKind::GeneratorError(context_location))?;
         if let Some(expansion) = result {
-            let from_loc = invoke.sourcegen_attr.bracket_token.span.end();
+            let from_loc = if invoke.is_file {
+                crate::region::item_end_span(&file.items[0]).end()
+            } else {
+                invoke.sourcegen_attr.bracket_token.span.end()
+            };
             let from = line_column_to_offset(&source, from_loc)?;
             let from = from + skip_whitespaces(&source[from..]);
             let region = Region {
@@ -138,6 +147,8 @@ fn handle_content(
         let mut empty_attrs = Vec::new();
         let attrs = crate::region::item_attributes(item).unwrap_or(&mut empty_attrs);
         if let Some(invoke) = detect_invocation(path, attrs, generators)? {
+            // Remove all attributes in front of the `#[sourcegen]` attribute
+            attrs.drain(0..invoke.sourcegen_attr_index + 1);
             let context_location = invoke.context_location;
             let result = crate::region::invoke_generator(item, invoke.args, invoke.generator)
                 .with_context(|_| SourcegenErrorKind::GeneratorError(context_location))?;
@@ -204,10 +215,35 @@ fn is_generated(attrs: &[Attribute]) -> bool {
     }
 }
 
+fn detect_file_invocation<'a>(
+    path: &Path,
+    file: &mut File,
+    generators: &'a GeneratorsMap,
+) -> Result<Option<GeneratorInfo<'a>>, SourcegenError> {
+    if let Some(mut invoke) = detect_invocation(path, &mut file.attrs, generators)? {
+        // This flag should only be set when we are processing a special workaround
+        invoke.is_file = false;
+        return Ok(Some(invoke));
+    }
+
+    if let Some(item) = file.items.iter_mut().next() {
+        // Special case: if first item in the file has `sourcegen::sourcegen` attribute with `file` set
+        // to `true`, we treat it as file sourcegen.
+        let mut empty_attrs = Vec::new();
+        let attrs = crate::region::item_attributes(item).unwrap_or(&mut empty_attrs);
+        if let Some(invoke) = detect_invocation(path, &mut attrs.clone(), generators)? {
+            if invoke.is_file {
+                return Ok(Some(invoke));
+            }
+        }
+    }
+    Ok(None)
+}
+
 /// Collect parameters from `#[sourcegen]` attribute.
 fn detect_invocation<'a>(
     path: &Path,
-    attrs: &mut Vec<Attribute>,
+    attrs: &[Attribute],
     generators: &'a GeneratorsMap,
 ) -> Result<Option<GeneratorInfo<'a>>, SourcegenError> {
     let sourcegen_attr = attrs.iter().position(|attr| {
@@ -217,8 +253,7 @@ fn detect_invocation<'a>(
             .map_or(false, |segment| segment.value().ident == "sourcegen")
     });
     if let Some(attr_pos) = sourcegen_attr {
-        let sourcegen_attr = attrs.drain(0..attr_pos + 1).last().unwrap();
-        let invoke = detect_generator(path, sourcegen_attr, generators)?;
+        let invoke = detect_generator(path, attrs, attr_pos, generators)?;
         Ok(Some(invoke))
     } else {
         Ok(None)
@@ -257,20 +292,28 @@ struct GeneratorInfo<'a> {
     args: AttributeArgs,
     /// `#[sourcegen]` attribute itself
     sourcegen_attr: Attribute,
+    /// Index of `#[sourcegen]` attribute
+    sourcegen_attr_index: usize,
     /// Location for error reporting
     context_location: Location,
+    /// If this invocation should regenerate the whole block up to the end.
+    /// (this is used as a workaround for attributes not allowed on modules)
+    is_file: bool,
 }
 
 fn detect_generator<'a>(
     path: &Path,
-    sourcegen_attr: Attribute,
+    attrs: &[Attribute],
+    sourcegen_attr_index: usize,
     generators: &'a GeneratorsMap,
 ) -> Result<GeneratorInfo<'a>, SourcegenError> {
+    let sourcegen_attr = attrs[sourcegen_attr_index].clone();
     let meta = parse_sourcegen_attr(path, &sourcegen_attr)?;
 
     let meta_span = meta.span();
     if let Meta::List(list) = meta {
         let mut name: Option<&LitStr> = None;
+        let mut is_file = false;
         for item in &list.nested {
             match item {
                 NestedMeta::Meta(Meta::NameValue(nv)) if nv.ident == "generator" => {
@@ -283,6 +326,11 @@ fn detect_generator<'a>(
                     } else {
                         let loc = Location::from_path_span(path, item.span());
                         return Err(SourcegenErrorKind::GeneratorAttributeMustBeString(loc).into());
+                    }
+                }
+                NestedMeta::Meta(Meta::NameValue(nv)) if nv.ident == "file" => {
+                    if let syn::Lit::Bool(ref value) = nv.lit {
+                        is_file = value.value;
                     }
                 }
                 _ => {}
@@ -302,8 +350,10 @@ fn detect_generator<'a>(
             return Ok(GeneratorInfo {
                 generator,
                 args,
+                sourcegen_attr_index,
                 sourcegen_attr,
                 context_location,
+                is_file,
             });
         }
     }
