@@ -4,6 +4,7 @@
 
 [![crates.io][Crate Logo]][Crate]
 [![Documentation][Doc Logo]][Doc]
+[![Build Status][CI Logo]][CI]
 
 Sourcegen is a toolkit for in-place source code generation in Rust.
 
@@ -80,3 +81,6 @@ invalid code, recovering might require reverting the generated code via source c
 
 [Doc]: https://docs.rs/sourcegen-cli
 [Doc Logo]: https://docs.rs/sourcegen-cli/badge.svg
+
+[CI]: https://dev.azure.com/commure/sourcegen/_build/latest?definitionId=1&branchName=master
+[CI Logo]: https://dev.azure.com/commure/sourcegen/_apis/build/status/commure.sourcegen?branchName=master
