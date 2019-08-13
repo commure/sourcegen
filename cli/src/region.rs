@@ -13,7 +13,6 @@ pub fn item_attributes(item: &mut syn::Item) -> Option<&mut Vec<Attribute>> {
         Item::Mod(item) => &mut item.attrs,
         Item::ForeignMod(item) => &mut item.attrs,
         Item::Type(item) => &mut item.attrs,
-        Item::Existential(item) => &mut item.attrs,
         Item::Struct(item) => &mut item.attrs,
         Item::Enum(item) => &mut item.attrs,
         Item::Union(item) => &mut item.attrs,
@@ -22,7 +21,7 @@ pub fn item_attributes(item: &mut syn::Item) -> Option<&mut Vec<Attribute>> {
         Item::Impl(item) => &mut item.attrs,
         Item::Macro(item) => &mut item.attrs,
         Item::Macro2(item) => &mut item.attrs,
-        Item::Verbatim(_item) => return None,
+        _ => return None,
     })
 }
 
@@ -44,7 +43,6 @@ pub fn item_end_span(item: &Item) -> Span {
         }
         Item::ForeignMod(item) => item.brace_token.span,
         Item::Type(item) => item.semi_token.span(),
-        Item::Existential(item) => item.semi_token.span,
         Item::Struct(item) => {
             if let Some(semi) = item.semi_token {
                 semi.span()
@@ -64,8 +62,8 @@ pub fn item_end_span(item: &Item) -> Span {
                 item.mac.span()
             }
         }
-        Item::Macro2(item) => item.brace_token.span,
-        Item::Verbatim(_item) => unreachable!(),
+        Item::Macro2(item) => item.rules.span(),
+        _ => unreachable!(),
     }
 }
 

@@ -4,9 +4,8 @@ use failure::ResultExt;
 use proc_macro2::{LineColumn, TokenStream};
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
-use syn::export::ToTokens;
 use syn::spanned::Spanned;
-use syn::{Attribute, AttributeArgs, File, Ident, Item, LitStr, Meta, NestedMeta};
+use syn::{Attribute, AttributeArgs, File, Item, LitStr, Meta, NestedMeta};
 
 static ITEM_COMMENT: &str =
     "// Generated. All manual edits to the block annotated with #[sourcegen...] will be discarded.";
@@ -207,7 +206,7 @@ fn is_generated(attrs: &[Attribute]) -> bool {
         attr.path
             .segments
             .first()
-            .map_or(false, |segment| segment.value().ident == "sourcegen")
+            .map_or(false, |segment| segment.ident == "sourcegen")
     });
     if let Some(sourcegen) = sourcegen_attr {
         sourcegen
@@ -257,7 +256,7 @@ fn detect_invocation<'a>(
         attr.path
             .segments
             .first()
-            .map_or(false, |segment| segment.value().ident == "sourcegen")
+            .map_or(false, |segment| segment.ident == "sourcegen")
     });
     if let Some(attr_pos) = sourcegen_attr {
         let invoke = detect_generator(path, attrs, attr_pos, generators)?;
@@ -315,7 +314,10 @@ fn detect_generator<'a>(
     generators: &'a GeneratorsMap,
 ) -> Result<GeneratorInfo<'a>, SourcegenError> {
     let sourcegen_attr = attrs[sourcegen_attr_index].clone();
-    let meta = parse_sourcegen_attr(path, &sourcegen_attr)?;
+
+    let loc = Location::from_path_span(path, sourcegen_attr.span());
+    let meta = sourcegen_attr.parse_meta()
+        .with_context(|_| SourcegenErrorKind::GeneratorError(loc.clone()))?;
 
     let meta_span = meta.span();
     if let Meta::List(list) = meta {
@@ -323,7 +325,7 @@ fn detect_generator<'a>(
         let mut is_file = false;
         for item in &list.nested {
             match item {
-                NestedMeta::Meta(Meta::NameValue(nv)) if nv.ident == "generator" => {
+                NestedMeta::Meta(Meta::NameValue(nv)) if nv.path.is_ident("generator") => {
                     if let syn::Lit::Str(ref value) = nv.lit {
                         if name.is_some() {
                             let loc = Location::from_path_span(path, item.span());
@@ -335,7 +337,7 @@ fn detect_generator<'a>(
                         return Err(SourcegenErrorKind::GeneratorAttributeMustBeString(loc).into());
                     }
                 }
-                NestedMeta::Meta(Meta::NameValue(nv)) if nv.ident == "file" => {
+                NestedMeta::Meta(Meta::NameValue(nv)) if nv.path.is_ident("file") => {
                     if let syn::Lit::Bool(ref value) = nv.lit {
                         is_file = value.value;
                     }
@@ -367,18 +369,6 @@ fn detect_generator<'a>(
 
     let loc = Location::from_path_span(path, meta_span);
     Err(SourcegenErrorKind::MissingGeneratorAttribute(loc).into())
-}
-
-fn parse_sourcegen_attr(path: &Path, sourcegen_attr: &Attribute) -> Result<Meta, SourcegenError> {
-    let loc = Location::from_path_span(path, sourcegen_attr.span());
-    let mut tokens = TokenStream::new();
-    // Fake `#[sourcegen(<attrs>)]` attribute as `parse_meta` does not like if we have
-    // `#[sourcegen::sourcegen(<attrs>)]`
-    Ident::new("sourcegen", sourcegen_attr.span()).to_tokens(&mut tokens);
-    sourcegen_attr.tts.to_tokens(&mut tokens);
-    let meta: Meta =
-        syn::parse2(tokens).with_context(|_| SourcegenErrorKind::GeneratorError(loc.clone()))?;
-    Ok(meta)
 }
 
 /// Look at the first newline and decide if we should use `\r\n` (Windows).
