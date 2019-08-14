@@ -316,7 +316,8 @@ fn detect_generator<'a>(
     let sourcegen_attr = attrs[sourcegen_attr_index].clone();
 
     let loc = Location::from_path_span(path, sourcegen_attr.span());
-    let meta = sourcegen_attr.parse_meta()
+    let meta = sourcegen_attr
+        .parse_meta()
         .with_context(|_| SourcegenErrorKind::GeneratorError(loc.clone()))?;
 
     let meta_span = meta.span();
