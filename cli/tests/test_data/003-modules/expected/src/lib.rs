@@ -20,3 +20,10 @@ pub mod two;
 
 #[path = "five_other.rs"]
 pub mod five;
+
+mod six {
+    mod seven {
+        mod eight;
+        mod nine;
+    }
+}
