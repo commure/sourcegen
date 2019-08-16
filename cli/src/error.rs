@@ -127,39 +127,4 @@ pub enum SourcegenErrorKind {
     RustFmtFailed,
     #[fail(display = "`rustfmt` returned an error: {}", _0)]
     RustFmtError(String),
-    //    #[fail(display = "Failed to invoke rustfmt:\n{}", _0)]
-    //    RustFmtFailed(String),
-    //    #[fail(display = "{}: multiple `generator` attributes are not allowed", _0)]
-    //    MultipleGeneratorAttributes(Location),
-    //    #[fail(
-    //        display = "{}: `generator` attributes must be a string (for example, `generator = \"sample_generator\"`)",
-    //        _0
-    //    )]
-    //    GeneratorAttributeMustBeString(Location),
-    //    #[fail(display = "Failed to invoke `{}`: {}", _0, _1)]
-    //    InvocationError(&'static str, #[cause] std::io::Error),
-    //    #[fail(display = "Output of `{}` was not a valid UTF-8 string", _0)]
-    //    OutputMustBeUtf8(&'static str),
-    //    #[fail(display = "{}: {}", _0, _1)]
-    //    IoError(String, #[cause] std::io::Error),
-    //    #[fail(display = "Failed to parse input file `{}`: {}", _0, _1)]
-    //    ParseError(String, #[cause] syn::Error),
-    //    #[fail(display = "{}: Failed to parse attributes: {}", _0, _1)]
-    //    ParseMetaError(Location, #[cause] syn::Error),
-    //    #[fail(
-    //    display = "{}: Failed to generate content, generator returned an error: {}",
-    //    _0, _1
-    //    )]
-    //    GeneratorError(Location, #[cause] failure::Error),
-    //    #[fail(display = "Failed to invoke `cargo metadatata`: {}", _0)]
-    //    MetadataError(#[cause] cargo_metadata::Error),
-    //    #[fail(
-    //        display = "Failed to resolve module '{}' with a parent module '{}'",
-    //        _1, _0
-    //    )]
-    //    CannotResolveModule(String, String),
-    //    #[fail(display = "Generator '{}' is not supported", _0)]
-    //    GeneratorNotFound(String),
-    //    #[fail(display = "Current directory cannot be determined: {}", _0)]
-    //    NoCurrentDirectory(#[cause] std::io::Error),
 }

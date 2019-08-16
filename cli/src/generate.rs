@@ -1,4 +1,5 @@
 use crate::error::{Location, SourcegenError, SourcegenErrorKind};
+use crate::mods::ModResolver;
 use crate::{GeneratorsMap, SourceGenerator};
 use failure::ResultExt;
 use proc_macro2::{LineColumn, TokenStream};
@@ -21,7 +22,7 @@ struct Region {
 pub fn process_source_file(
     path: &Path,
     generators: &HashMap<&str, &dyn SourceGenerator>,
-    is_root: bool,
+    mod_resolver: &ModResolver,
 ) -> Result<(), SourcegenError> {
     let source = std::fs::read_to_string(path)
         .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
@@ -69,8 +70,8 @@ pub fn process_source_file(
             &source,
             &mut file.items,
             &generators,
-            is_root,
             &mut replacements,
+            &mod_resolver,
         )?;
         render_expansions(path, &source, &replacements, ITEM_COMMENT)?
     };
@@ -141,8 +142,8 @@ fn handle_content(
     source: &str,
     items: &mut [Item],
     generators: &GeneratorsMap,
-    is_root: bool,
     replacements: &mut BTreeMap<Region, TokenStream>,
+    mod_resolver: &ModResolver,
 ) -> Result<(), SourcegenError> {
     let mut item_idx = 0;
     while item_idx < items.len() {
@@ -189,12 +190,20 @@ fn handle_content(
         }
 
         if let Item::Mod(item) = item {
+            let nested_mod_resolved = mod_resolver.push_module(&item.ident.to_string());
             if item.content.is_some() {
                 let items = &mut item.content.as_mut().unwrap().1;
-                handle_content(path, source, items, generators, false, replacements)?;
+                handle_content(
+                    path,
+                    source,
+                    items,
+                    generators,
+                    replacements,
+                    &nested_mod_resolved,
+                )?;
             } else {
-                let mod_file = crate::mods::resolve_module(path, &item, is_root)?;
-                process_source_file(&mod_file, generators, false)?;
+                let mod_file = mod_resolver.resolve_module_file(item)?;
+                process_source_file(&mod_file, generators, &nested_mod_resolved)?;
             }
         }
     }

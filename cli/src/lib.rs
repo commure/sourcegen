@@ -99,7 +99,12 @@ pub fn run_sourcegen(parameters: &SourcegenParameters) -> Result<(), SourcegenEr
     for package in packages {
         eprintln!("Generating source code in crate '{}'", package.name);
         for target in &package.targets {
-            self::generate::process_source_file(&target.src_path, &generators, true)?;
+            let parent_path = target
+                .src_path
+                .parent()
+                .ok_or(SourcegenErrorKind::MetadataError)?;
+            let mod_resolver = crate::mods::ModResolver::new(parent_path);
+            self::generate::process_source_file(&target.src_path, &generators, &mod_resolver)?;
         }
     }
     Ok(())
