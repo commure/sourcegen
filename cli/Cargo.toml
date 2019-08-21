@@ -26,3 +26,12 @@ dunce = "1.0.0"
 quote = "1.0.0"
 copy_dir = "0.1.2"
 pretty_assertions = "0.6.1"
+
+[features]
+# Disable normalizing doc comments (`#[doc = r" hello"]`) into `///`.
+# On nightly, one can make `rustfmt` to do that via `normalize_doc_attributes` configuration parameter for `rustfmt`,
+# but on current stable this is not supported. So we support doing our own normalization by default. This feature
+# is to disable that normalization
+disable_normalize_doc_attributes = []
+
+default = []

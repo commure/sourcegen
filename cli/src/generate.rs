@@ -406,6 +406,13 @@ impl std::fmt::Display for Replacement<'_> {
             f.write_char('\r')?;
         }
         f.write_char('\n')?;
-        write!(f, "{}", self.tokens)
+
+        #[cfg(feature = "disable_normalize_doc_attributes")]
+        write!(f, "{}", self.tokens)?;
+
+        #[cfg(not(feature = "disable_normalize_doc_attributes"))]
+        crate::normalize::write_tokens_normalized(f, self.tokens.clone())?;
+
+        Ok(())
     }
 }

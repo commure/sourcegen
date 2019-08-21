@@ -13,6 +13,8 @@ use std::path::Path;
 mod error;
 mod generate;
 mod mods;
+#[cfg(not(feature = "disable_normalize_doc_attributes"))]
+mod normalize;
 mod region;
 mod rustfmt;
 
