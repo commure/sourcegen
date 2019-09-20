@@ -1,6 +1,7 @@
 use failure::Error;
 use proc_macro2::TokenStream;
 use quote::quote;
+use sourcegen_cli::tokens::PlainComment;
 use sourcegen_cli::SourceGenerator;
 
 /// Writes back the input without any changes
@@ -109,6 +110,27 @@ impl SourceGenerator for GenerateFile {
         Ok(Some(quote! {
             #[doc = r" Some generated comment here"]
             struct Hello {
+                pub hello: String,
+            }
+        }))
+    }
+}
+
+/// Generates a struct with regular comments
+pub struct GeneratePlainComments;
+
+impl SourceGenerator for GeneratePlainComments {
+    fn generate_struct(
+        &self,
+        _args: syn::AttributeArgs,
+        item: &syn::ItemStruct,
+    ) -> Result<Option<TokenStream>, Error> {
+        let vis = &item.vis;
+        let ident = &item.ident;
+        Ok(Some(quote! {
+            #PlainComment "This is some struct!"
+            #vis struct #ident {
+                #PlainComment "This is some field!"
                 pub hello: String,
             }
         }))

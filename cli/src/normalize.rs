@@ -10,6 +10,7 @@ pub fn write_tokens_normalized(
     let mut tokens = tokens.into_iter().peekable();
     let mut joint = false;
     let mut first = true;
+    let mut plain_comment = false;
     while let Some(tt) = tokens.next() {
         if !first && !joint {
             write!(f, " ")?;
@@ -17,6 +18,16 @@ pub fn write_tokens_normalized(
         first = false;
         joint = false;
 
+        // Handle plain comments
+        if plain_comment {
+            if let TokenTree::Literal(lit) = tt {
+                if let Lit::Str(lit) = Lit::new(lit) {
+                    writeln!(f, "// {}", lit.value())?;
+                }
+            }
+            plain_comment = false;
+            continue;
+        }
         if let Some(comment) = tokens
             .peek()
             .and_then(|lookahead| as_doc_comment(&tt, lookahead))
@@ -40,6 +51,9 @@ pub fn write_tokens_normalized(
                     write_tokens_normalized(f, tt.stream())?;
                     write!(f, " {}", end)?
                 }
+            }
+            TokenTree::Ident(ref tt) if tt == crate::tokens::MAGIC_IDENT => {
+                plain_comment = true;
             }
             TokenTree::Ident(ref tt) => write!(f, "{}", tt)?,
             TokenTree::Punct(ref tt) => {

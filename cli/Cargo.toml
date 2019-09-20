@@ -17,6 +17,7 @@ harness = false
 [dependencies]
 syn = { version = "1.0.0", features = ["full"] }
 proc-macro2 = { version = "1.0.0", features = ["span-locations"] }
+quote = "1.0.0"
 cargo_metadata = "0.8.1"
 failure = "0.1.5"
 tempfile = "3.0.8"

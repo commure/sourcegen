@@ -17,6 +17,7 @@ mod mods;
 mod normalize;
 mod region;
 mod rustfmt;
+pub mod tokens;
 
 /// Trait to be implemented by source generators.
 pub trait SourceGenerator {
