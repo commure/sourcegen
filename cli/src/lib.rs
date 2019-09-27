@@ -112,3 +112,5 @@ pub fn run_sourcegen(parameters: &SourcegenParameters) -> Result<(), SourcegenEr
     }
     Ok(())
 }
+
+pub use crate::generate::process_single_file;

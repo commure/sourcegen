@@ -52,7 +52,11 @@ pub fn write_tokens_normalized(
                     write!(f, " {}", end)?
                 }
             }
-            TokenTree::Ident(ref tt) if tt == crate::tokens::MAGIC_IDENT => {
+            TokenTree::Ident(ref tt) if tt == crate::tokens::MAGIC_NEWLINE_IDENT => {
+                writeln!(f)?;
+                writeln!(f)?;
+            }
+            TokenTree::Ident(ref tt) if tt == crate::tokens::MAGIC_COMMENT_IDENT => {
                 plain_comment = true;
             }
             TokenTree::Ident(ref tt) => write!(f, "{}", tt)?,
