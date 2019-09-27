@@ -41,6 +41,7 @@ fn parameters(manifest: &Path) -> SourcegenParameters {
                 "generate-plain-comments",
                 &self::generators::GeneratePlainComments,
             ),
+            ("generate-newline", &self::generators::GenerateNewLine),
             ("generate-file", &self::generators::GenerateFile),
         ],
         ..Default::default()

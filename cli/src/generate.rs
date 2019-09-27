@@ -19,6 +19,29 @@ struct Region {
     indent: usize,
 }
 
+/// Replace a single file with the generated content
+pub fn process_single_file(path: &Path, tokens: TokenStream) -> Result<(), SourcegenError> {
+    let formatter = crate::rustfmt::Formatter::new(path.parent().unwrap())?;
+
+    let source = if path.exists() {
+        std::fs::read_to_string(path)
+            .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?
+    } else {
+        String::new()
+    };
+    let replacement = Replacement {
+        comment: FILE_COMMENT,
+        is_cr_lf: is_cr_lf(&source),
+        tokens: &tokens,
+    };
+    let output = formatter.format(path, replacement)?;
+    if source != output {
+        std::fs::write(path, output)
+            .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
+    }
+    Ok(())
+}
+
 pub fn process_source_file(
     path: &Path,
     generators: &HashMap<&str, &dyn SourceGenerator>,

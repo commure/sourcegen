@@ -1,7 +1,7 @@
 use failure::Error;
 use proc_macro2::TokenStream;
 use quote::quote;
-use sourcegen_cli::tokens::PlainComment;
+use sourcegen_cli::tokens::{NewLine, PlainComment};
 use sourcegen_cli::SourceGenerator;
 
 /// Writes back the input without any changes
@@ -133,6 +133,25 @@ impl SourceGenerator for GeneratePlainComments {
                 #PlainComment "This is some field!"
                 pub hello: String,
             }
+        }))
+    }
+}
+
+/// Generates a struct with a newline between struct and impl
+pub struct GenerateNewLine;
+
+impl SourceGenerator for GenerateNewLine {
+    fn generate_struct(
+        &self,
+        _args: syn::AttributeArgs,
+        item: &syn::ItemStruct,
+    ) -> Result<Option<TokenStream>, Error> {
+        let vis = &item.vis;
+        let ident = &item.ident;
+        Ok(Some(quote! {
+            #vis struct #ident;
+            #NewLine
+            impl #ident {}
         }))
     }
 }
