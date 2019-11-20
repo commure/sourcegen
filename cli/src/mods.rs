@@ -25,6 +25,7 @@ impl ModResolver {
             Ok(self.base.join(path))
         } else {
             let name = item.ident.to_string();
+            let name = name.trim_start_matches("r#");
             let path = self.base.join(&format!("{}.rs", name));
             if path.is_file() {
                 return Ok(path);
