@@ -7,7 +7,7 @@
 use crate::error::{SourcegenError, SourcegenErrorKind};
 use failure::{Error, ResultExt};
 use proc_macro2::TokenStream;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
 mod error;
@@ -69,6 +69,9 @@ pub struct SourcegenParameters<'a> {
     /// List of generators to run. Each entry is a pair of generator name and trait object
     /// implementing the generator.
     pub generators: &'a [(&'a str, &'a dyn SourceGenerator)],
+    /// List of packages to generate code for. If not given, the default is to generate code for
+    /// all of the packages.
+    pub packages: BTreeSet<String>,
 
     #[doc(hidden)]
     pub __must_use_default: (),
@@ -92,9 +95,21 @@ pub fn run_sourcegen(parameters: &SourcegenParameters) -> Result<(), SourcegenEr
     }
     let metadata = cmd.exec().context(SourcegenErrorKind::MetadataError)?;
 
+    // Make sure all package names are valid
+    let mut invalid = parameters.packages.clone();
+    for p in &metadata.packages {
+        invalid.remove(&p.name);
+    }
+    if !invalid.is_empty() {
+        let names = invalid.into_iter().collect::<Vec<_>>().join(", ");
+        return Err(SourcegenErrorKind::InvalidPackageNames(names).into());
+    }
+
     let packages = metadata
         .packages
         .into_iter()
+        .filter(|p| parameters.packages.is_empty() || parameters.packages.contains(&p.name))
+        // Only take local projects
         .filter(|p| p.source.is_none())
         // FIXME: should we look at "rename", too?
         .filter(|p| p.dependencies.iter().any(|dep| dep.name == "sourcegen"));
