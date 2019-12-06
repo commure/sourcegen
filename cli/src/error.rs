@@ -127,4 +127,7 @@ pub enum SourcegenErrorKind {
     RustFmtFailed,
     #[fail(display = "`rustfmt` returned an error: {}", _0)]
     RustFmtError(String),
+
+    #[fail(display = "Invalid package names: {}", _0)]
+    InvalidPackageNames(String),
 }
