@@ -1,6 +1,6 @@
 [package]
 name = "sourcegen-cli"
-version = "0.3.5-alpha.0"
+version = "0.3.5"
 authors = ["Commure <developers@commure.com>"]
 edition = "2018"
 repository = "https://github.com/commure/sourcegen"
