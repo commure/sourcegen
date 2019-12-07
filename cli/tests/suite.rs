@@ -43,6 +43,7 @@ fn parameters(manifest: &Path) -> SourcegenParameters {
             ),
             ("generate-newline", &self::generators::GenerateNewLine),
             ("generate-file", &self::generators::GenerateFile),
+            ("generate-trait", &self::generators::GenerateTrait),
         ],
         ..Default::default()
     }

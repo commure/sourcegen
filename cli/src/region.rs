@@ -84,7 +84,7 @@ pub fn invoke_generator(
         Item::Struct(item) => generator.generate_struct(args, item),
         Item::Enum(item) => generator.generate_enum(args, item),
         //        Union(ItemUnion),
-        //        Trait(ItemTrait),
+        Item::Trait(item) => generator.generate_trait(args, item),
         //        Impl(ItemImpl),
         //        Macro(ItemMacro),
         //        Macro2(ItemMacro2),

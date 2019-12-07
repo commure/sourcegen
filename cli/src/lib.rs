@@ -39,6 +39,15 @@ pub trait SourceGenerator {
         Ok(None)
     }
 
+    /// Generate trait definition. Return `None` if no changes are necessary.
+    fn generate_trait(
+        &self,
+        _args: syn::AttributeArgs,
+        _item: &syn::ItemTrait,
+    ) -> Result<Option<TokenStream>, Error> {
+        Ok(None)
+    }
+
     /// Generate module. Return `None` if no changes are necessary.
     fn generate_mod(
         &self,
