@@ -155,3 +155,23 @@ impl SourceGenerator for GenerateNewLine {
         }))
     }
 }
+
+/// Writes back the input without any changes
+pub struct GenerateTrait;
+
+impl SourceGenerator for GenerateTrait {
+    fn generate_trait(
+        &self,
+        _args: syn::AttributeArgs,
+        item: &syn::ItemTrait,
+    ) -> Result<Option<TokenStream>, Error> {
+        let vis = &item.vis;
+        let ident = &item.ident;
+        Ok(Some(quote! {
+            /// Some generated comment here
+            #vis trait #ident {
+                fn hello();
+            }
+        }))
+    }
+}
