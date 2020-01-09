@@ -5,7 +5,6 @@
 //!
 //! [`sourcegen`]: http://crates.io/crates/sourcegen
 use crate::error::{SourcegenError, SourcegenErrorKind};
-use failure::{Error, ResultExt};
 use proc_macro2::TokenStream;
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
@@ -26,7 +25,7 @@ pub trait SourceGenerator {
         &self,
         _args: syn::AttributeArgs,
         _item: &syn::ItemStruct,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         Ok(None)
     }
 
@@ -35,7 +34,7 @@ pub trait SourceGenerator {
         &self,
         _args: syn::AttributeArgs,
         _item: &syn::ItemEnum,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         Ok(None)
     }
 
@@ -44,7 +43,7 @@ pub trait SourceGenerator {
         &self,
         _args: syn::AttributeArgs,
         _item: &syn::ItemTrait,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         Ok(None)
     }
 
@@ -53,7 +52,7 @@ pub trait SourceGenerator {
         &self,
         _args: syn::AttributeArgs,
         _item: &syn::ItemMod,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         Ok(None)
     }
 
@@ -62,7 +61,7 @@ pub trait SourceGenerator {
         &self,
         _args: syn::AttributeArgs,
         _file: &syn::File,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         Ok(None)
     }
 }
@@ -138,3 +137,4 @@ pub fn run_sourcegen(parameters: &SourcegenParameters) -> Result<(), SourcegenEr
 }
 
 pub use crate::generate::process_single_file;
+use anyhow::Context;

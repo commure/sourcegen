@@ -71,7 +71,7 @@ pub fn invoke_generator(
     item: &Item,
     args: AttributeArgs,
     generator: &dyn SourceGenerator,
-) -> Result<Option<TokenStream>, failure::Error> {
+) -> Result<Option<TokenStream>, anyhow::Error> {
     match item {
         //        ExternCrate(ItemExternCrate),
         //        Use(ItemUse),

@@ -1,4 +1,3 @@
-use failure::Error;
 use proc_macro2::TokenStream;
 use quote::quote;
 use sourcegen_cli::tokens::{NewLine, PlainComment};
@@ -12,7 +11,7 @@ impl SourceGenerator for WriteBack {
         &self,
         _args: syn::AttributeArgs,
         item: &syn::ItemStruct,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         Ok(Some(quote! {
             #item
         }))
@@ -22,7 +21,7 @@ impl SourceGenerator for WriteBack {
         &self,
         _args: syn::AttributeArgs,
         item: &syn::ItemEnum,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         Ok(Some(quote! {
             #item
         }))
@@ -32,7 +31,7 @@ impl SourceGenerator for WriteBack {
         &self,
         _args: syn::AttributeArgs,
         item: &syn::ItemMod,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         Ok(Some(quote! {
             #item
         }))
@@ -47,7 +46,7 @@ impl SourceGenerator for GenerateImpls {
         &self,
         _args: syn::AttributeArgs,
         item: &syn::ItemStruct,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         let vis = &item.vis;
         let ident = &item.ident;
         Ok(Some(quote! {
@@ -67,7 +66,7 @@ impl SourceGenerator for GenerateSimple {
         &self,
         _args: syn::AttributeArgs,
         item: &syn::ItemStruct,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         let vis = &item.vis;
         let ident = &item.ident;
         Ok(Some(quote! {
@@ -86,7 +85,7 @@ impl SourceGenerator for GenerateDocComments {
         &self,
         _args: syn::AttributeArgs,
         item: &syn::ItemStruct,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         let vis = &item.vis;
         let ident = &item.ident;
         Ok(Some(quote! {
@@ -106,7 +105,7 @@ impl SourceGenerator for GenerateFile {
         &self,
         _args: syn::AttributeArgs,
         _file: &syn::File,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         Ok(Some(quote! {
             #[doc = r" Some generated comment here"]
             struct Hello {
@@ -124,7 +123,7 @@ impl SourceGenerator for GeneratePlainComments {
         &self,
         _args: syn::AttributeArgs,
         item: &syn::ItemStruct,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         let vis = &item.vis;
         let ident = &item.ident;
         Ok(Some(quote! {
@@ -145,7 +144,7 @@ impl SourceGenerator for GenerateNewLine {
         &self,
         _args: syn::AttributeArgs,
         item: &syn::ItemStruct,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         let vis = &item.vis;
         let ident = &item.ident;
         Ok(Some(quote! {
@@ -164,7 +163,7 @@ impl SourceGenerator for GenerateTrait {
         &self,
         _args: syn::AttributeArgs,
         item: &syn::ItemTrait,
-    ) -> Result<Option<TokenStream>, Error> {
+    ) -> Result<Option<TokenStream>, anyhow::Error> {
         let vis = &item.vis;
         let ident = &item.ident;
         Ok(Some(quote! {

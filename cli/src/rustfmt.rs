@@ -1,5 +1,5 @@
 use crate::error::{SourcegenError, SourcegenErrorKind};
-use failure::ResultExt;
+use anyhow::Context;
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Output, Stdio};

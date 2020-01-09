@@ -1,7 +1,7 @@
 use crate::error::{Location, SourcegenError, SourcegenErrorKind};
 use crate::mods::ModResolver;
 use crate::{GeneratorsMap, SourceGenerator};
-use failure::ResultExt;
+use anyhow::Context;
 use proc_macro2::{LineColumn, TokenStream};
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
@@ -25,7 +25,7 @@ pub fn process_single_file(path: &Path, tokens: TokenStream) -> Result<(), Sourc
 
     let source = if path.exists() {
         std::fs::read_to_string(path)
-            .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?
+            .with_context(|| SourcegenErrorKind::ProcessFile(path.display().to_string()))?
     } else {
         String::new()
     };
@@ -37,7 +37,7 @@ pub fn process_single_file(path: &Path, tokens: TokenStream) -> Result<(), Sourc
     let output = formatter.format(path, replacement)?;
     if source != output {
         std::fs::write(path, output)
-            .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
+            .with_context(|| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
     }
     Ok(())
 }
@@ -48,9 +48,9 @@ pub fn process_source_file(
     mod_resolver: &ModResolver,
 ) -> Result<(), SourcegenError> {
     let source = std::fs::read_to_string(path)
-        .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
+        .with_context(|| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
     let mut file = syn::parse_file(&source)
-        .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
+        .with_context(|| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
 
     let output = if let Some(invoke) = detect_file_invocation(path, &mut file, generators)? {
         if !invoke.is_file {
@@ -63,7 +63,7 @@ pub fn process_source_file(
         let result = invoke
             .generator
             .generate_file(invoke.args, &file)
-            .with_context(|_| SourcegenErrorKind::GeneratorError(context_location))?;
+            .with_context(|| SourcegenErrorKind::GeneratorError(context_location))?;
         if let Some(expansion) = result {
             let from_loc = if invoke.is_file {
                 crate::region::item_end_span(&file.items[0]).end()
@@ -101,7 +101,7 @@ pub fn process_source_file(
 
     if source != output {
         std::fs::write(path, output)
-            .with_context(|_| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
+            .with_context(|| SourcegenErrorKind::ProcessFile(path.display().to_string()))?;
     }
     Ok(())
 }
@@ -181,7 +181,7 @@ fn handle_content(
             attrs.drain(0..invoke.sourcegen_attr_index + 1);
             let context_location = invoke.context_location;
             let result = crate::region::invoke_generator(item, invoke.args, invoke.generator)
-                .with_context(|_| SourcegenErrorKind::GeneratorError(context_location))?;
+                .with_context(|| SourcegenErrorKind::GeneratorError(context_location))?;
             if let Some(expansion) = result {
                 let indent = invoke.sourcegen_attr.span().start().column;
                 let from_loc = invoke.sourcegen_attr.bracket_token.span.end();
@@ -350,7 +350,7 @@ fn detect_generator<'a>(
     let loc = Location::from_path_span(path, sourcegen_attr.span());
     let meta = sourcegen_attr
         .parse_meta()
-        .with_context(|_| SourcegenErrorKind::GeneratorError(loc.clone()))?;
+        .with_context(|| SourcegenErrorKind::GeneratorError(loc.clone()))?;
 
     let meta_span = meta.span();
     if let Meta::List(list) = meta {
