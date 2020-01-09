@@ -1,11 +1,14 @@
-use failure::Error;
 use pretty_assertions::assert_eq as pretty_assert_eq;
 use std::path::Path;
 use std::process::Command;
 
 /// Assert that all files at `expected` path exist at `actual` path and the contents of the files
 /// is the same.
-pub fn assert_matches_expected(base: &Path, actual: &Path, expected: &Path) -> Result<(), Error> {
+pub fn assert_matches_expected(
+    base: &Path,
+    actual: &Path,
+    expected: &Path,
+) -> Result<(), anyhow::Error> {
     assert_eq!(
         actual.is_file(),
         expected.is_file(),
@@ -81,7 +84,7 @@ impl<'a> std::fmt::Debug for PrettyString<'a> {
 }
 
 /// Install `rustfmt` component so our generator can use it.
-pub fn install_rustfmt(path: &Path) -> Result<(), Error> {
+pub fn install_rustfmt(path: &Path) -> Result<(), anyhow::Error> {
     let output = Command::new("rustup")
         .arg("component")
         .arg("add")

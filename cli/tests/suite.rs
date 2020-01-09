@@ -1,11 +1,10 @@
-use failure::Error;
 use sourcegen_cli::SourcegenParameters;
 use std::path::Path;
 
 pub mod generators;
 pub mod helpers;
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<(), anyhow::Error> {
     let temp = tempfile::tempdir()?;
     let root = temp.path().join("root");
     copy_dir::copy_dir("tests/test_data", &root)?;
@@ -49,7 +48,7 @@ fn parameters(manifest: &Path) -> SourcegenParameters {
     }
 }
 
-fn run_test_dir(dir: &Path) -> Result<(), failure::Error> {
+fn run_test_dir(dir: &Path) -> Result<(), anyhow::Error> {
     let manifest = dir.join("input").join("Cargo.toml");
     sourcegen_cli::run_sourcegen(&parameters(&manifest))?;
 
